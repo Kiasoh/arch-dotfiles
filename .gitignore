@@ -1,0 +1,10 @@
+# State files
+waybar/.config/waybar/.gpu_mode_state
+
+# Auto-generated ml4w wallpaper cache (regenerated on each wallpaper change)
+ml4w/.config/ml4w/cache/
+
+# Full tool installations (install these via package manager, not tracked in dotfiles)
+nvm/
+ohmyzsh/
+

@@ -1,0 +1,38 @@
+alias sshniflheim="ssh -x niflheim@103.75.196.227"
+alias sshkittyniflheim="kitty +kitten ssh niflheim@103.75.196.227"
+
+export HTTP_PROXY=http://127.0.0.1:10808
+export HTTPS_PROXY=http://127.0.0.1:10808
+
+export PATH=$PATH:/usr/local/go/bin
+export PATH=$PATH:/home/kiasoh/go/bin
+eval "$(thefuck --alias)"
+eval "$(zoxide init zsh)"
+alias cd=z
+alias fzf='fzf --preview "bat --style=numbers --color=always {}" --bind "enter:execute(nvim {})"'
+
+alias git-config='/usr/bin/git --git-dir=$HOME/.config/git-tracker --work-tree=$HOME'
+
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export GBM_BACKEND=nvidia-drm
+
+# Arduino shortcuts
+alias ard-compile="arduino-cli compile --fqbn esp32:esp32:esp32"
+alias ard-upload="arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:esp32"
+alias ard-monitor="picocom -b 115200 /dev/ttyUSB0"
+alias ard-libs="arduino-cli lib list"
+
+# Quick compile+upload
+alias ard-go="arduino-cli compile --fqbn esp32:esp32:esp32 . && arduino-cli upload -p /dev/ttyUSB0 --fqbn esp32:esp32:esp32 ."
+
+# Replace YOUR_PROJECT_ID with your actual Google Cloud project ID
+export GOOGLE_CLOUD_PROJECT_ID="gemini-cli-482307"
+
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey '^x^e' edit-command-line
+
+autoload zmv
+
+alias set-proxy="export HTTP_PROXY=http://127.0.0.1:10808 ; export HTTPS_PROXY=http://127.0.0.1:10808"
+alias unset-proxy="unset HTTP_PROXY HTTPS_PROXY"

@@ -1,0 +1,11 @@
+return {}
+-- return {
+--     "glebzlat/arduino-nvim",
+--     dependencies = { "neovim/nvim-lspconfig" },
+--     config = function()
+--         require("arduino-nvim").setup({
+--             default_fqbn = "esp32:esp32:esp32", -- Change this to your board's FQBN
+--             filetypes = { "arduino" },
+--         })
+--     end,
+-- }

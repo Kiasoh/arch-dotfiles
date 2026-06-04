@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+WALLPAPER_DIR="$HOME/Pictures/wallpaper/"
+CURRENT_WALL=$(hyprctl hyprpaper listloaded)
+
+# Get a random wallpaper that is not the current one
+WALLPAPER=$(find "$WALLPAPER_DIR" -type f ! -name "$(basename "$CURRENT_WALL")" | shuf -n 1)
+
+~/.config/hypr/scripts/wallpaper.sh "$WALLPAPER" &
+
+# Apply the selected wallpaper
+waypaper --wallpaper "$WALLPAPER"
