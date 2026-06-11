@@ -13,6 +13,8 @@ vim.keymap.set("n", "<Tab>", "<cmd>bnext<CR>", { desc = "Next buffer" })
 vim.keymap.set("n", "<S-Tab>", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
 vim.keymap.set("n", "<leader>bd", "<cmd>bdelete<CR>", { desc = "Delete buffer" })
 vim.keymap.set("n", "<leader>bo", "<cmd>%bd|e#|bd#<CR>", { desc = "Delete all but current" })
+vim.keymap.set("n", "<leader>-", "<cmd>Oil<CR>", {desc = "Oil"})
+vim.keymap.set("n", "<leader>=", "<cmd>Oil --float<CR>", {desc = "Oil"})
 
 vim.keymap.set("n", "<leader>bl", "<cmd>Telescope buffers sort_mru=true sort_lastused=true initial_mode=normal<CR>",
     { desc = "List buffers" })

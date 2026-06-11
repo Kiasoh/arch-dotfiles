@@ -137,11 +137,11 @@ return {
                 -- Padding around the floating window
                 padding = 2,
                 -- max_width and max_height can be integers or a float between 0 and 1 (e.g. 0.4 for 40%)
-                max_width = 0,
-                max_height = 0,
-                border = nil,
+                max_width = 80,
+                max_height = 40,
+                border = "rounded",
                 win_options = {
-                    winblend = 0,
+                    winblend = 10,
                 },
                 -- optionally override the oil buffers window title with custom function: fun(winid: integer): string
                 get_win_title = nil,
