@@ -29,9 +29,9 @@ return {
             },
             messages = {
                 enabled = true,
-                view = "notify", -- can be: "mini", "virtualtext", "notify", "popup"
+                view = "mini", -- can be: "mini", "virtualtext", "notify", "popup"
                 view_error = "notify",
-                view_warn = "notify",
+                view_warn = "mini",
                 view_history = "messages",
                 view_search = "mini",
             },
@@ -135,11 +135,6 @@ return {
                     },
                 },
             }
-        })
-
-        require("notify").setup({
-            stages = "fade_in_slide_out",
-            timeout = 3000,
         })
     end,
 }
