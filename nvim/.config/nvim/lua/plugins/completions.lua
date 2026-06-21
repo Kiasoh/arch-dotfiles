@@ -1,9 +1,21 @@
 return {
     {
+        "L3MON4D3/LuaSnip",
+        version = "v2.*",
+        dependencies = {
+            "rafamadriz/friendly-snippets",
+        },
+        config = function()
+            require("luasnip.loaders.from_vscode").lazy_load()
+        end,
+    },
+
+    {
         "saghen/blink.cmp",
         version = "1.*",
         event = { "InsertEnter", "CmdlineEnter" },
         dependencies = {
+            "L3MON4D3/LuaSnip",
             "rafamadriz/friendly-snippets",
         },
 
@@ -13,11 +25,8 @@ return {
 
                 ["<C-b>"] = { "scroll_documentation_up", "fallback" },
                 ["<C-f>"] = { "scroll_documentation_down", "fallback" },
-
                 ["<C-Space>"] = { "show", "show_documentation", "hide_documentation" },
-
                 ["<C-a>"] = { "hide", "fallback" },
-
                 ["<CR>"] = { "accept", "fallback" },
 
                 ["<Tab>"] = {
@@ -47,9 +56,7 @@ return {
 
                 menu = {
                     border = "rounded",
-                    draw = {
-                        treesitter = { "lsp" },
-                    },
+                    -- border = "none",
                 },
 
                 documentation = {
@@ -57,6 +64,7 @@ return {
                     auto_show_delay_ms = 200,
                     window = {
                         border = "rounded",
+                        -- border = "none",
                     },
                 },
 
@@ -73,7 +81,7 @@ return {
             },
 
             snippets = {
-                preset = "default",
+                preset = "luasnip",
             },
 
             sources = {
@@ -87,16 +95,6 @@ return {
 
             cmdline = {
                 enabled = true,
-
-                keymap = {
-                    preset = "cmdline",
-                },
-
-                completion = {
-                    menu = {
-                        auto_show = true,
-                    },
-                },
             },
 
             fuzzy = {
@@ -117,20 +115,13 @@ return {
         },
         opts = {
             check_ts = true,
-
             ts_config = {
                 lua = { "string" },
                 javascript = { "template_string" },
                 typescript = { "template_string" },
                 java = false,
             },
-
             fast_wrap = {},
-
-            disable_filetype = {
-                "TelescopePrompt",
-                "vim",
-            },
         },
     },
 }
