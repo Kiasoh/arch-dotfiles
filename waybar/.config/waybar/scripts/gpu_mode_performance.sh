@@ -11,7 +11,7 @@ sudo envycontrol -s nvidia
 
 # ASUS specific power profile (Performance/Turbo)
 if command -v asusctl >/dev/null; then
-    asusctl profile -P Performance
+    asusctl profile set Performance
 fi
 
 # Set CPU to max performance

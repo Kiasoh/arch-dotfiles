@@ -10,7 +10,7 @@ sudo envycontrol -s hybrid
 
 # ASUS specific power profile (Balanced)
 if command -v asusctl >/dev/null; then
-    asusctl profile -P Balanced
+    asusctl profile set Balanced
 fi
 
 # Intel pstate uses 'powersave' as the base for balanced operation, 

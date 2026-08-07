@@ -9,7 +9,7 @@ sudo envycontrol -s integrated
 
 # ASUS specific power profile (Quiet / Power Saver)
 if command -v asusctl >/dev/null; then
-    asusctl profile -P Quiet
+    asusctl profile set Quiet
 fi
 
 # Set CPU governor and Intel Energy Performance Preference (EPP)
