@@ -35,3 +35,6 @@ export NVM_DIR="$HOME/.config/nvm"
 
 # GapCode
 export PATH="/home/kiasoh/.gapcode/bin:$PATH"
+
+export PATH="$HOME/.npm-global/bin:$PATH"
+export PATH="/home/kiasoh/.local/bin:$PATH"
