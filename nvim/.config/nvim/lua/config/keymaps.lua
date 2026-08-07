@@ -13,8 +13,8 @@ vim.keymap.set("n", "<Tab>", "<cmd>bnext<CR>", { desc = "Next buffer" })
 vim.keymap.set("n", "<S-Tab>", "<cmd>bprevious<CR>", { desc = "Previous buffer" })
 vim.keymap.set("n", "<leader>bd", "<cmd>bdelete<CR>", { desc = "Delete buffer" })
 vim.keymap.set("n", "<leader>bo", "<cmd>%bd|e#|bd#<CR>", { desc = "Delete all but current" })
-vim.keymap.set("n", "<leader>-", "<cmd>Oil<CR>", {desc = "Oil"})
-vim.keymap.set("n", "<leader>=", "<cmd>Oil --float<CR>", {desc = "Oil"})
+vim.keymap.set("n", "<leader>-", "<cmd>Oil<CR>", { desc = "Oil" })
+vim.keymap.set("n", "<leader>=", "<cmd>Oil --float<CR>", { desc = "Oil" })
 
 vim.keymap.set("n", "<leader>bl", "<cmd>Telescope buffers sort_mru=true sort_lastused=true initial_mode=normal<CR>",
     { desc = "List buffers" })
@@ -37,10 +37,10 @@ vim.keymap.set("n", "<leader>dd", function()
     require("config.diag_picker").select_preset()
 end, { desc = "Select diagnostic style" })
 --navigate splits
-vim.keymap.set('n', '<C-h>', '<C-w>h')
-vim.keymap.set('n', '<C-j>', '<C-w>j')
-vim.keymap.set('n', '<C-k>', '<C-w>k')
-vim.keymap.set('n', '<C-l>', '<C-w>l')
+-- vim.keymap.set('n', '<C-h>', '<C-w>h')
+-- vim.keymap.set('n', '<C-j>', '<C-w>j')
+-- vim.keymap.set('n', '<C-k>', '<C-w>k')
+-- vim.keymap.set('n', '<C-l>', '<C-w>l')
 
 -- Quickly resize splits
 vim.keymap.set('n', '<A-h>', '<C-w><')
