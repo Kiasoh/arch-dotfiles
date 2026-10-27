@@ -45,7 +45,7 @@ function M.set_preset(name)
         return
     end
     vim.diagnostic.config(cfg)
-    vim.notify("Diagnostics style → " .. name, vim.log.levels.INFO)
+    -- vim.notify("Diagnostics style → " .. name, vim.log.levels.INFO)
 end
 
 return M

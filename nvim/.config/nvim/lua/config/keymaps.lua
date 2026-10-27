@@ -1,5 +1,9 @@
 vim.g.mapleader = " "
 vim.keymap.set("n", "<leader>qq", "<cmd>q<cr>", { desc = "Quit" })
+vim.keymap.set("n", "<leader>ww", "<cmd>w<cr>", { desc = "Write" })
+vim.keymap.set("n", "<leader>wa", "<cmd>wa<cr>", { desc = "Write" })
+vim.keymap.set("n", "<leader>wq", "<cmd>wq<cr>", { desc = "Write" })
+
 vim.keymap.set("n", "<leader>qs", function() require("persistence").load() end, { desc = "Restore session" })
 vim.keymap.set("n", "<leader>ql", function() require("persistence").load({ last = true }) end,
     { desc = "Restore last session" })

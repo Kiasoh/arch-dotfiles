@@ -37,6 +37,10 @@ return {
                     "--query-driver=/home/kiasoh/.platformio/packages/toolchain-xtensa-esp32/bin/xtensa-esp32-elf-*",
                 },
             })
+            vim.lsp.config("qmlls", {
+                cmd = { "/usr/lib/qt6/bin/qmlls" },
+            })
+            vim.lsp.enable("qmlls")
             require("mason-lspconfig").setup({
                 ensure_installed = servers,
                 automatic_enable = true,
