@@ -23,6 +23,3 @@ vim.api.nvim_set_hl(0, "LuasnipExitNodeUnvisited", { underline = false })
 -- remove underline from rust semantic tokens
 vim.api.nvim_set_hl(0, "@lsp.type.unresolvedReference.rust", { underline = false })
 vim.api.nvim_set_hl(0, "@lsp.type.macro.rust", { underline = false })
-
-
-vim.lsp.set_log_level("ERROR")
