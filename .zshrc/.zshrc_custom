@@ -1,6 +1,3 @@
-alias sshniflheim="ssh -x niflheim@103.75.196.227"
-alias sshkittyniflheim="kitty +kitten ssh niflheim@103.75.196.227"
-
 export HTTP_PROXY=http://127.0.0.1:10808
 export HTTPS_PROXY=http://127.0.0.1:10808
 

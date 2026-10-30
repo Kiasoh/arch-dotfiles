@@ -16,7 +16,7 @@ fi
 # Intel pstate uses 'powersave' as the base for balanced operation, 
 # the EPP handles the actual balance scaling.
 for gov in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
-    echo powersave | sudo tee "$gov" >/dev/null
+    echo performance | sudo tee "$gov" >/dev/null
 done
 for epp in /sys/devices/system/cpu/cpu*/cpufreq/energy_performance_preference; do
     [ -f "$epp" ] && echo balance_performance | sudo tee "$epp" >/dev/null
