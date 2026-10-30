@@ -1,4 +1,5 @@
 [config]
+prefer = "saturation"
 
 [templates.hyprland]
 input_path = '~/.config/matugen/templates/hyprland-colors.conf'
@@ -8,6 +9,10 @@ post_hook = 'hyprctl reload'
 [templates.waybar]
 input_path = '~/.config/matugen/templates/colors.css'
 output_path = '~/.config/waybar/colors.css'
+
+[templates.quickshell]
+input_path = '~/.config/matugen/templates/quickshell-colors.json'
+output_path = '~/.config/quickshell/colors.json'
 
 [templates.rofi]
 input_path = '~/.config/matugen/templates/rofi-colors.rasi'
