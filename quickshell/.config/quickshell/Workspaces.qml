@@ -42,12 +42,13 @@ Item {
                 opacity: modelData.active ? 1 : 0.7
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 200
+                        duration: 50
                     }
                 }
                 Behavior on implicitWidth {
                     NumberAnimation {
-                        duration: 100
+                        duration: 250
+                        easing.type: Easing.OutBack
                     }
                 }
                 radius: height / 2
@@ -59,7 +60,7 @@ Item {
                     font {
                         family: clockFont.name
                         pixelSize: 15
-                        weight: Font.Medium
+                        weight: 600
                     }
                     anchors.centerIn: parent
                     text: workspaceRect.modelData.name

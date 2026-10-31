@@ -17,13 +17,18 @@ PanelWindow {
         left: true
     }
     color: "transparent"
-    implicitHeight: clock_container.implicitHeight
+    implicitHeight: Math.max(clock_container.maximumHeight, leftSec.implicitHeight + 2, rightSec.implicitHeight + 2)
 
-    RowLayout {
-        anchors.centerIn: parent
-        Clock {
-            id: clock_container
-        }
+    mask: Region {
+        item: clock_container
+        Region { item: leftSec }
+        Region { item: rightSec }
+    }
+
+    Clock {
+        id: clock_container
+        anchors.top: parent.top
+        anchors.horizontalCenter: parent.horizontalCenter
     }
 
     RowLayout {
@@ -31,8 +36,9 @@ PanelWindow {
 
         anchors {
             left: parent.left
-            verticalCenter: parent.verticalCenter
+            top: parent.top
             leftMargin: 12
+            topMargin: 2
         }
         spacing: 2
 
@@ -44,8 +50,9 @@ PanelWindow {
         spacing: 4
         anchors {
             right: parent.right
-            verticalCenter: parent.verticalCenter
+            top: parent.top
             rightMargin: 12
+            topMargin: 2
         }
         Network {}
         Volume {}
