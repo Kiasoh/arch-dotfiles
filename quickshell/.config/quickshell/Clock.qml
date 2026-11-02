@@ -20,7 +20,6 @@ Item {
         NumberAnimation {
             duration: 500
             easing.type: Easing.BezierSpline
-            // Caelestia's default spatial curve adds a small overshoot.
             easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
         }
     }
@@ -84,14 +83,13 @@ Item {
 
     FontLoader {
         id: clockFont
-        //source: Qt.resolvedUrl("fonts/RuntimeRegular-m2Odx.otf")
         source: Qt.resolvedUrl("fonts/CyberDigital-KVgED.otf")
     }
     Text {
         id: clockText
         font {
             family: clockFont.name
-            pixelSize: 18
+            pixelSize: 16
             weight: 600
         }
         anchors.centerIn: parent
