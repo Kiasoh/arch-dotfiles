@@ -1,387 +1,403 @@
-import QtQuick
-import QtQuick.Layouts
-import Quickshell
-import Quickshell.Io
+pragma ComponentBehavior: Bound
 
-// Stateless power controls. Everything reads its state live from the system
-// (sysfs / envycontrol / asusctl / hyprctl) — no persisted mode, no state file.
-// Collapsed pill in the bar; click to open the control dropdown.
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Shapes
+import Quickshell
+import "components"
+
 Rectangle {
     id: root
 
-    // live-read state
-    property string gpuMode: "?"          // envycontrol --query
-    property string governor: "?"         // cpu0 scaling_governor
-    property string epp: "?"              // cpu0 EPP
-    property var eppOptions: []
-    property var govOptions: []
-    property string fan: "?"              // asusctl profile get
-    property string hyprState: "?"        // anim|blur|shadow|round|border|gaps|vrr
-    property string monCurrent: ""        // e.g. 1920x1080@144
-    property var monModes: []             // e.g. ["144","60"]
-
+    required property var barWindow
+    readonly property alias drawerItem: drawer
+    readonly property real drawerHeight: drawer.visible ? drawer.height : 0
     property bool open: false
-    property bool busy: false
-    property string note: ""              // transient feedback line
-    property string noteError: ""
-    property bool reloginNeeded: false    // after an envycontrol switch
-
-    // baseline values used when toggling visuals back ON
-    readonly property int gapsBaseline: 5
-    readonly property int roundingBaseline: 10
-    readonly property int borderBaseline: 2
-
-    implicitHeight: powerLabel.implicitHeight + 4
-    implicitWidth: powerLabel.implicitWidth + 12
-
-    color: open ? Theme.primary : Theme.surfaceContainer
+    readonly property bool busy: hardware.busy
+    readonly property alias backend: hardware
+    property string pendingGpu: ""
+    property int selectedTab: 0
+    property real reveal: open ? 1 : 0
+    implicitWidth: 28
+    implicitHeight: 24
     radius: height / 2
+    color: open ? Theme.primaryContainer : Theme.surfaceContainer
 
-    Text {
-        id: powerLabel
-        anchors.centerIn: parent
-        color: root.open ? Theme.primaryContainerText : Theme.onSurface
-        font.pixelSize: 14
-        text: ""
+    onOpenChanged: {
+        if (open) {
+            hardware.refresh();
+            Qt.callLater(() => drawer.item?.focusTabs());
+        } else {
+            pendingGpu = "";
+        }
+    }
+    Behavior on color {
+        ColorAnimation {
+            duration: 150
+        }
+    }
+    Behavior on reveal {
+        NumberAnimation {
+            duration: 500
+            easing.type: Easing.BezierSpline
+            easing.bezierCurve: [0.38, 1.21, 0.22, 1, 1, 1]
+        }
     }
 
-    MouseArea {
+    ActionButton {
         anchors.fill: parent
+        text: ""
+        checked: root.open
+        Accessible.name: "Hardware controls"
         onClicked: root.open = !root.open
     }
 
-    function refresh() {
-        gpuProc.running = true
-        fanProc.running = true
-        hyprProc.running = true
-        monProc.running = true
-        govView.reload()
-        eppView.reload()
-        eppAvailView.reload()
-        govAvailView.reload()
-        root.governor = (govView.text() || "?").trim() || "?"
-        root.epp = (eppView.text() || "?").trim() || "?"
-        root.eppOptions = ((eppAvailView.text() || "") + "").trim().split(/\s+/).filter(v => v && v != "default")
-        root.govOptions = ((govAvailView.text() || "") + "").trim().split(/\s+/).filter(v => v)
+    function confirmGpu() {
+        if (!root.pendingGpu || root.busy)
+            return;
+        const mode = root.pendingGpu;
+        root.pendingGpu = "";
+        hardware.runAction(["pkexec", Quickshell.shellPath("scripts/qs-gpu-mode.sh"), mode], "gpu");
     }
 
-    function runPkexec(script, arg) {
-        if (root.busy) return
-        root.busy = true
-        actionProc.command = ["pkexec", Quickshell.shellPath("scripts/" + script), arg]
-        actionProc.running = true
+    function friendly(value) {
+        const names = {
+            performance: "Performance",
+            powersave: "Power saving",
+            balance_performance: "Balanced",
+            balance_power: "Battery balance",
+            power: "Battery saver",
+            hybrid: "Hybrid",
+            integrated: "Integrated",
+            nvidia: "NVIDIA",
+            ac: "AC profile",
+            bat: "Battery profile"
+        };
+        if (value.includes("@"))
+            return parseFloat(value.split("@")[1]) + " Hz";
+        return names[value] || value.replace(/_/g, " ");
     }
 
-    function runHypr(keywords) {
-        if (root.busy) return
-        root.busy = true
-        hyprSetProc.command = ["hyprctl", "--batch", keywords]
-        hyprSetProc.running = true
+    PowerState {
+        id: hardware
+        screenName: root.barWindow.screen.name
+        active: root.open
     }
 
-    Process { id: gpuProc
-        command: ["envycontrol", "--query"]
-        stdout: SplitParser { onRead: d => { root.gpuMode = d.trim() } }
-    }
-    Process { id: fanProc
-        command: ["asusctl", "profile", "get"]
-        stdout: SplitParser { onRead: d => { root.fan = d.trim().split(/\s+/).pop() || "?" } }
-    }
-    Process { id: hyprProc // anim|blur|shadow|round|border|gapsIn|vrr
-        command: ["bash", Quickshell.shellPath("scripts/qs-read-hypr.sh")]
-        stdout: SplitParser { onRead: d => { root.hyprState = d.trim() } }
-    }
-    Process { id: monProc
-        command: ["bash", Quickshell.shellPath("scripts/qs-read-monitor.sh")]
-        stdout: SplitParser { onRead: d => {
-                const p = d.split("|")
-                root.monCurrent = p[0] || ""
-                root.monModes = (p[1] || "").split(/\s+/).filter(m => m)
-            } }
-    }
+    Loader {
+        id: drawer
+        // Closing overshoots below zero before the animation finishes.
+        active: root.open || root.reveal !== 0
+        focus: true
+        parent: root.barWindow.contentItem
+        z: -1
+        x: Math.max(12, Math.min(root.barWindow.width - width - 12, root.mapToItem(parent, root.width, 0).x - width + 20))
+        y: 0
+        width: Math.min(404, root.barWindow.width - 24)
+        height: Math.max(0, root.reveal) * Math.min(root.barWindow.screen.height * 0.75, root.barWindow.barHeight + (drawer.item?.implicitHeight || 0) + 32)
+        visible: root.reveal > 0
+        opacity: Math.min(1, Math.max(0, root.reveal))
+        clip: true
 
-    // privileged single-action runner (one pkexec prompt per action)
-    Process { id: actionProc
-        stdout: SplitParser {
-            onRead: d => {
-                root.noteError = d.trim()
-                console.warn("pkexec:", d.trim())
+        sourceComponent: Item {
+            implicitHeight: contents.implicitHeight
+            function focusTabs() {
+                tabs.forceActiveFocus();
             }
-        }
-        onExited: {
-            root.busy = false
-            root.refresh()
-        }
-    }
-    // hyprctl keyword runner (user-level, no prompt)
-    Process { id: hyprSetProc
-        onExited: {
-            root.busy = false
-            root.refresh()
-        }
-    }
 
-    FileView { id: govView;     path: "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor" }
-    FileView { id: eppView;     path: "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_preference" }
-    FileView { id: eppAvailView; path: "/sys/devices/system/cpu/cpu0/cpufreq/energy_performance_available_preferences" }
-    FileView { id: govAvailView; path: "/sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors" }
-
-    Timer {
-        interval: 4000
-        running: root.open
-        repeat: true
-        onTriggered: root.refresh()
-    }
-
-    // ── dropdown panel ────────────────────────────────────────────
-    PanelWindow {
-        id: dropdown
-
-        anchors {
-            top: true
-            right: true
-        }
-        margins {
-            top: root.implicitHeight + 6
-            right: 4
-        }
-        exclusionMode: ExclusionMode.Ignore
-
-        visible: root.open
-        color: "transparent"
-        implicitWidth: 300
-        implicitHeight: box.implicitHeight
-
-        // close when clicking anywhere else on the screen
-        MouseArea {
-            // absorbs clicks that fall outside the box but inside the window
-            anchors.fill: parent
-            onClicked: root.open = false
-            z: -1
-        }
-
-        Rectangle {
-            id: box
-            radius: 10
-            color: Theme.surfaceContainer
-
-            // anchored children don't contribute to implicit size, so
-            // bind the window height to the layout's own implicit size
-            implicitWidth: 300
-            implicitHeight: contents.implicitHeight + 24
-
-            ColumnLayout {
-                id: contents
+            Shape {
                 anchors.fill: parent
-                anchors.margins: 12
-                spacing: 10
-
-                Text {
-                    Layout.fillWidth: true
-                    text: "Power / Hardware"
-                    color: Theme.onSurfaceVariant
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
+                preferredRendererType: Shape.CurveRenderer
+                ShapePath {
+                    fillColor: Theme.surfaceContainer
+                    strokeColor: "transparent"
+                    startX: 0
+                    startY: 0
+                    PathArc {
+                        x: 16
+                        y: 16
+                        radiusX: 16
+                        radiusY: 16
+                        direction: PathArc.Clockwise
+                    }
+                    PathLine {
+                        x: 16
+                        y: Math.max(16, drawer.height - 24)
+                    }
+                    PathArc {
+                        x: 40
+                        y: drawer.height
+                        radiusX: 24
+                        radiusY: 24
+                        direction: PathArc.Counterclockwise
+                    }
+                    PathLine {
+                        x: drawer.width - 40
+                        y: drawer.height
+                    }
+                    PathArc {
+                        x: drawer.width - 16
+                        y: Math.max(16, drawer.height - 24)
+                        radiusX: 24
+                        radiusY: 24
+                        direction: PathArc.Counterclockwise
+                    }
+                    PathLine {
+                        x: drawer.width - 16
+                        y: 16
+                    }
+                    PathArc {
+                        x: drawer.width
+                        y: 0
+                        radiusX: 16
+                        radiusY: 16
+                        direction: PathArc.Clockwise
+                    }
+                    PathLine {
+                        x: 0
+                        y: 0
+                    }
                 }
-                RowLayout {
-                    Layout.fillWidth: true
-                    visible: root.reloginNeeded
+            }
+            ScrollView {
+                id: scroll
+                x: 28
+                y: root.barWindow.barHeight + 12
+                width: drawer.width - 56
+                height: Math.max(0, drawer.height - y - 20)
+                contentWidth: availableWidth
+                clip: true
+                ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                ColumnLayout {
+                    id: contents
+                    width: scroll.availableWidth
+                    spacing: 12
+                    Keys.onEscapePressed: root.open = false
+
+                    // RowLayout {
+                    //     Layout.fillWidth: true
+                    //     Column {
+                    //         Layout.fillWidth: true
+                    //         spacing: 3
+                    //         Text { text: "Hardware"; color: Theme.onSurface; font.pixelSize: 19; font.weight: Font.DemiBold }
+                    //         Text { text: "Tune your laptop"; color: Theme.onSurfaceVariant; font.pixelSize: 11 }
+                    //     }
+                    //     ActionButton { text: "×"; Accessible.name: "Close hardware controls"; onClicked: root.open = false }
+                    // }
                     Text {
                         Layout.fillWidth: true
+                        visible: hardware.rebootNeeded
+                        text: "GPU configuration changed. Reboot required."
                         color: Theme.primary
-                        font.pixelSize: 11
-                        text: "⚠ GPU switch: scores/rules applied at startup only — logout to apply"
+                        font.pixelSize: 12
+                        wrapMode: Text.WordWrap
                     }
-                }
-                RowLayout {
-                    Layout.fillWidth: true
                     Text {
                         Layout.fillWidth: true
-                        color: root.noteError ? Theme.primaryContainerText : Theme.onSurfaceVariant
-                        font.pixelSize: 11
-                        text: root.noteError ? ("⚠ " + root.noteError) : root.note
+                        visible: hardware.note !== "" || hardware.noteError !== ""
+                        text: hardware.noteError || hardware.note
+                        color: hardware.noteError ? (Theme.colors.error || Theme.primary) : Theme.onSurfaceVariant
+                        font.pixelSize: 12
+                        wrapMode: Text.Wrap
+                        maximumLineCount: 5
+                        elide: Text.ElideRight
+                        Accessible.name: text
+                    }
+                    ControlCard {
+                        visible: root.pendingGpu !== ""
+                        Text {
+                            Layout.fillWidth: true
+                            text: "Switch to " + root.friendly(root.pendingGpu) + "? A reboot is required to activate this mode."
+                            color: Theme.onSurface
+                            font.pixelSize: 12
+                            wrapMode: Text.WordWrap
+                        }
+                        RowLayout {
+                            ActionButton {
+                                text: "Cancel"
+                                onClicked: root.pendingGpu = ""
+                            }
+                            ActionButton {
+                                text: "Confirm change"
+                                highlighted: true
+                                enabled: !root.busy
+                                onClicked: root.confirmGpu()
+                            }
+                        }
+                    }
+                    TabBar {
+                        id: tabs
+                        Layout.fillWidth: true
+                        currentIndex: root.selectedTab
+                        onCurrentIndexChanged: {
+                            root.selectedTab = currentIndex;
+                            scroll.contentItem.contentY = 0;
+                        }
+                        background: Rectangle {
+                            color: Qt.lighter(Theme.surfaceContainer, 1.2)
+                            radius: 14
+                        }
+                        Repeater {
+                            model: ["Performance", "Display", "Effects"]
+                            TabButton {
+                                id: tab
+                                required property string modelData
+                                text: modelData
+                                implicitHeight: 36
+                                background: Rectangle {
+                                    radius: tab.down ? 8 : 14
+                                    color: tab.checked ? Theme.primaryContainer : tab.hovered ? Qt.lighter(Theme.surfaceContainer, 1.4) : "transparent"
+                                    border.width: tab.activeFocus ? 1 : 0
+                                    border.color: Theme.primary
+                                    Behavior on color {
+                                        ColorAnimation {
+                                            duration: 150
+                                        }
+                                    }
+                                }
+                                contentItem: Text {
+                                    text: tab.text
+                                    color: tab.checked ? Theme.primaryContainerText : Theme.onSurfaceVariant
+                                    font.pixelSize: 11
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                            }
+                        }
+                    }
+                    ColumnLayout {
+                        visible: root.selectedTab === 0
+                        Layout.fillWidth: true
+                        spacing: 10
+                        ControlCard {
+                            SegRow {
+                                labelFor: root.friendly
+                                label: "GPU mode · " + root.friendly(hardware.gpuMode)
+                                options: ["nvidia", "hybrid", "integrated"]
+                                current: hardware.gpuMode
+                                enabled: ["nvidia", "hybrid", "integrated"].includes(hardware.gpuMode) && !root.busy
+                                chooseFn: value => root.pendingGpu = value
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: hardware.gpuMode === "?" ? "GPU mode query unavailable." : "GPU changes activate after reboot."
+                                color: Theme.onSurfaceVariant
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                        ControlCard {
+                            SegRow {
+                                labelFor: root.friendly
+                                label: "CPU governor"
+                                options: hardware.govOptions
+                                current: hardware.governor
+                                enabled: hardware.governor !== "?" && !root.busy
+                                chooseFn: value => hardware.runAction(["pkexec", Quickshell.shellPath("scripts/qs-cpu-governor.sh"), value], "cpu")
+                            }
+                            SegRow {
+                                labelFor: root.friendly
+                                label: "Energy preference"
+                                options: hardware.eppOptions
+                                current: hardware.epp
+                                enabled: hardware.epp !== "?" && !root.busy
+                                chooseFn: value => hardware.runAction(["pkexec", Quickshell.shellPath("scripts/qs-cpu-epp.sh"), value], "cpu")
+                            }
+                        }
+                        ControlCard {
+                            SegRow {
+                                labelFor: root.friendly
+                                label: "ASUS profile"
+                                options: ["Quiet", "Balanced", "Performance"]
+                                current: hardware.fan
+                                enabled: hardware.fan !== "?" && !root.busy
+                                chooseFn: value => hardware.runAction(["bash", Quickshell.shellPath("scripts/qs-asus-profile.sh"), value], "fan")
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: hardware.fan === "?" ? "ASUS service unavailable. Start asusd to use profiles." : "Your ASUS profile policy can also change CPU energy preference."
+                                color: Theme.onSurfaceVariant
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                        ControlCard {
+                            SegRow {
+                                labelFor: root.friendly
+                                label: "TLP override"
+                                options: ["ac", "bat"]
+                                enabled: !root.busy
+                                chooseFn: value => hardware.runAction(["pkexec", Quickshell.shellPath("scripts/qs-tlp-force.sh"), value], "tlp")
+                            }
+                            Text {
+                                Layout.fillWidth: true
+                                text: "Temporary override. Resets on power-source events."
+                                color: Theme.onSurfaceVariant
+                                font.pixelSize: 11
+                                wrapMode: Text.WordWrap
+                            }
+                        }
+                    }
+                    ControlCard {
+                        visible: root.selectedTab === 1
+                        SegRow {
+                            labelFor: root.friendly
+                            label: hardware.monitor ? "Refresh rate · " + hardware.monitor.name : "Display unavailable"
+                            options: hardware.refreshModes
+                            current: hardware.currentMode
+                            enabled: hardware.monitor !== null && !root.busy
+                            chooseFn: value => hardware.setRefresh(value)
+                        }
+                        ToggleRow {
+                            text: "Variable refresh rate"
+                            checked: !!hardware.hyprState["misc:vrr"]
+                            enabled: !!hardware.monitor?.hardwareDetails?.vrrCapable && hardware.hyprState["misc:vrr"] !== undefined && !root.busy
+                            onClicked: hardware.setOption("misc:vrr", checked ? 1 : 0)
+                        }
+                        Text {
+                            Layout.fillWidth: true
+                            visible: !hardware.monitor?.hardwareDetails?.vrrCapable
+                            text: "This display does not report VRR support."
+                            color: Theme.onSurfaceVariant
+                            font.pixelSize: 11
+                            wrapMode: Text.WordWrap
+                        }
+                    }
+                    ControlCard {
+                        visible: root.selectedTab === 2
+                        Repeater {
+                            model: [
+                                {
+                                    label: "Animations",
+                                    key: "animations:enabled"
+                                },
+                                {
+                                    label: "Blur",
+                                    key: "decoration:blur:enabled"
+                                },
+                                {
+                                    label: "Shadows",
+                                    key: "decoration:shadow:enabled"
+                                }
+                            ]
+                            ToggleRow {
+                                required property var modelData
+                                text: modelData.label
+                                checked: !!hardware.hyprState[modelData.key]
+                                enabled: hardware.hyprState[modelData.key] !== undefined && !root.busy
+                                onClicked: hardware.setOption(modelData.key, checked)
+                            }
+                        }
+                        ToggleRow {
+                            text: "Window gaps"
+                            checked: [hardware.hyprState["general:gaps_in"], hardware.hyprState["general:gaps_out"]].some(value => String(value || "").split(/\s+/).some(side => Number(side) > 0))
+                            enabled: hardware.hyprState["general:gaps_in"] !== undefined && hardware.hyprState["general:gaps_out"] !== undefined && !root.busy
+                            onClicked: hardware.setGaps(checked)
+                        }
                     }
                 }
-                SegRow {
-                    Layout.fillWidth: true
-                    label: "GPU (relogin)"
-                    options: root.gpuMode in ["nvidia", "hybrid", "integrated"] ? ["nvidia", "hybrid", "integrated"] : ["hybrid", "integrated"]
-                    current: root.gpuMode
-                    chooseFn: v => {
-                        root.reloginNeeded = true
-                        root.runPkexec("qs-gpu-mode.sh", v)
-                    }
-                }
-                SegRow {
-                    Layout.fillWidth: true
-                    label: "Governor"
-                    options: root.govOptions.length ? root.govOptions : ["performance", "powersave"]
-                    current: root.governor
-                    chooseFn: v => root.runPkexec("qs-cpu-governor.sh", v)
-                }
-                SegRow {
-                    Layout.fillWidth: true
-                    label: "EPP"
-                    options: root.eppOptions.length ? root.eppOptions : ["performance", "balance_performance", "power"]
-                    current: root.epp
-                    chooseFn: v => root.runPkexec("qs-cpu-epp.sh", v)
-                }
-                SegRow {
-                    Layout.fillWidth: true
-                    label: "Fan"
-                    options: ["Quiet", "Balanced", "Performance"]
-                    current: root.fan
-                    chooseFn: v => {
-                        root.busy = true
-                        fanSetProc.command = ["asusctl", "profile", "set", v]
-                        fanSetProc.running = true
-                    }
-                }
-                SegRow {
-                    Layout.fillWidth: true
-                    label: "TLP"
-                    options: ["ac", "bat"]
-                    current: ""
-                    chooseFn: v => {
-                        root.reloginNeeded = false
-                        root.runPkexec("qs-tlp-force.sh", v)
-                    }
-                }
-                ToggleRow {
-                    Layout.fillWidth: true
-                    label: "Animations"
-                    on: root.hyprState.split("|")[0] == "1"
-                    flipFn: on => root.runHypr("keyword animations:enabled " + (on ? 1 : 0))
-                }
-                ToggleRow {
-                    Layout.fillWidth: true
-                    label: "Blur"
-                    on: root.hyprState.split("|")[1] == "1"
-                    flipFn: on => root.runHypr("keyword decoration:blur:enabled " + (on ? 1 : 0))
-                }
-                ToggleRow {
-                    Layout.fillWidth: true
-                    label: "Shadows"
-                    on: root.hyprState.split("|")[2] == "1"
-                    flipFn: on => root.runHypr("keyword decoration:shadow:enabled " + (on ? 1 : 0))
-                }
-                ToggleRow {
-                    Layout.fillWidth: true
-                    label: "VRR"
-                    on: root.hyprState.split("|")[6] == "1"
-                    flipFn: on => root.runHypr("keyword misc:vrr " + (on ? 1 : 0))
-                }
-                ToggleRow {
-                    Layout.fillWidth: true
-                    label: "Gaps"
-                    on: root.hyprState.split("|")[5] != "0"
-                    flipFn: on => root.runHypr(
-                        "keyword general:gaps_in " + (on ? root.gapsBaseline : 0) +
-                        ";keyword general:gaps_out " + (on ? root.gapsBaseline : 0))
-                }
-                SegRow {
-                    Layout.fillWidth: true
-                    label: "Refresh"
-                    options: root.monModes.length ? root.monModes : ["144", "60"]
-                    current: root.monCurrent
-                    chooseFn: v => root.runHypr("keyword monitor eDP-1,1920x1080@" + v + ",auto,1")
-                }
-            }
-        }
-    }
-
-    Process { id: fanSetProc
-        onExited: { root.busy = false; root.refresh() }
-    }
-
-    component SegRow: RowLayout {
-        property string label: ""
-        property var options: []
-        property string current: ""
-        property var chooseFn: null
-
-        Text {
-            Layout.preferredWidth: 70
-            text: label
-            color: Theme.onSurfaceVariant
-            font.pixelSize: 11
-        }
-        Repeater {
-            model: options
-            delegate: Rectangle {
-                id: segBtn
-                required property string modelData
-                readonly property bool isOn: modelData === current
-
-                Layout.fillWidth: true
-                Layout.preferredHeight: 24
-                radius: height / 2
-                color: isOn ? Theme.primaryContainer : Theme.surfaceContainer
-                border.color: isOn ? Theme.primary : Theme.onSurfaceVariant
-                border.width: 1
-
-                Behavior on color { ColorAnimation { duration: 100 } }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: segBtn.modelData
-                    color: segBtn.isOn ? Theme.primaryContainerText : Theme.onSurfaceVariant
-                    font.pixelSize: 11
-                    font.weight: segBtn.isOn ? Font.DemiBold : Font.Medium
-                }
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        // delegate's parent is the SegRow instance
-                        if (root.open && segBtn.parent && segBtn.parent.selectFn)
-                            segBtn.parent.selectFn(segBtn.modelData)
-                    }
-                }
-            }
-        }
-    }
-
-    component ToggleRow: RowLayout {
-        property string label: ""
-        property bool on: false
-        property var flipFn: null
-
-        Text {
-            Layout.preferredWidth: 70
-            text: label
-            color: Theme.onSurfaceVariant
-            font.pixelSize: 11
-        }
-        Rectangle {
-            id: toggleSwitch
-            readonly property real knob: 12
-            Layout.fillWidth: true
-            Layout.preferredHeight: 16
-
-            radius: height / 2
-            color: on ? Theme.primaryContainer : Theme.surfaceContainer
-            border.color: on ? Theme.primary : Theme.onSurfaceVariant
-            border.width: 1
-
-            Behavior on color { ColorAnimation { duration: 100 } }
-
-            Rectangle {
-                x: toggleSwitch.on ? toggleSwitch.width - width - 2 : 2
-                anchors.verticalCenter: toggleSwitch.verticalCenter
-
-                width: toggleSwitch.knob
-                height: toggleSwitch.knob
-                radius: width / 2
-                color: Theme.onSurface
-
-                Behavior on x { NumberAnimation { duration: 100 } }
-            }
-            MouseArea {
-                anchors.fill: parent
-                cursorShape: Qt.PointingHandCursor
-                onClicked: if (toggleSwitch.flipFn)
-                    toggleSwitch.flipFn(!toggleSwitch.on)
             }
         }
     }

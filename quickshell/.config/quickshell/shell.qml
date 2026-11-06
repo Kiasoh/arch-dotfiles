@@ -1,6 +1,8 @@
 import Quickshell
 import QtQuick
 import QtQuick.Layouts
+import Quickshell.Hyprland
+import Quickshell.Wayland
 
 // import Quickshell.Networking
 
@@ -23,7 +25,16 @@ Variants {
             left: true
         }
         color: "transparent"
-        implicitHeight: Math.max(clock_container.maximumHeight, leftSec.implicitHeight + 2, rightSec.implicitHeight + 2)
+        readonly property real barHeight: Math.max(clock_container.maximumHeight, leftSec.implicitHeight + 2, rightSec.implicitHeight + 2)
+        implicitHeight: Math.max(barHeight, powerControl.drawerHeight)
+        exclusiveZone: barHeight
+        WlrLayershell.keyboardFocus: powerControl.open && !powerControl.busy ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+
+        HyprlandFocusGrab {
+            active: powerControl.open && !powerControl.busy
+            windows: [root]
+            onCleared: if (!powerControl.busy) powerControl.open = false
+        }
 
         mask: Region {
             item: clock_container
@@ -33,6 +44,7 @@ Variants {
             Region {
                 item: rightSec
             }
+            Region { item: powerControl.drawerItem }
         }
 
         Clock {
@@ -46,9 +58,9 @@ Variants {
 
             anchors {
                 left: parent.left
-                verticalCenter: parent.verticalCenter
+                top: parent.top
                 leftMargin: 12
-                topMargin: 2
+                topMargin: (root.barHeight - implicitHeight) / 2
             }
             spacing: 2
 
@@ -60,14 +72,14 @@ Variants {
             spacing: 4
             anchors {
                 right: parent.right
-                verticalCenter: parent.verticalCenter
+                top: parent.top
                 rightMargin: 12
-                topMargin: 2
+                topMargin: (root.barHeight - implicitHeight) / 2
             }
             Network {}
             Volume {}
             Stats {}
-            Power {}
+            Power { id: powerControl; barWindow: root }
             Battery {}
             Notification {}
         }

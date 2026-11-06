@@ -18,5 +18,5 @@ for _ in $(seq 1 20); do
     [ "$(envycontrol --query 2>/dev/null)" = "$1" ] && exit 0
     sleep 0.2
 done
-echo "warning: query did not confirm new mode" >&2
-exit 0
+echo "GPU mode query did not confirm the requested configuration." >&2
+exit 1
