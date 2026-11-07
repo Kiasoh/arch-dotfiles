@@ -27,7 +27,7 @@ end
 vim.keymap.set('n', '<leader>fp', show_path_popup, { desc = "Show path popup" })
 
 
-local function yank_file_lines()
+local function yank_file_lines(visual)
     local bufnr = vim.api.nvim_get_current_buf()
     local file = vim.api.nvim_buf_get_name(bufnr)
 
@@ -39,14 +39,8 @@ local function yank_file_lines()
     -- Use a path relative to Neovim's current working directory.
     file = vim.fn.fnamemodify(file, ":.")
 
-    local first = vim.fn.line("'<")
-    local last = vim.fn.line("'>")
-
-    -- In normal mode, use the current line.
-    if first == 0 or last == 0 then
-        first = vim.fn.line(".")
-        last = first
-    end
+    local first = visual and vim.fn.line("v") or vim.fn.line(".")
+    local last = vim.fn.line(".")
 
     if first > last then
         first, last = last, first
@@ -61,11 +55,11 @@ local function yank_file_lines()
 end
 
 -- Normal mode: copy the current line
-vim.keymap.set("n", "<leader>yl", yank_file_lines, {
+vim.keymap.set("n", "<leader>yl", function() yank_file_lines(false) end, {
     desc = "Copy file path and current line",
 })
 
 -- Visual mode: copy the selected line range
-vim.keymap.set("v", "<leader>yl", yank_file_lines, {
+vim.keymap.set("v", "<leader>yl", function() yank_file_lines(true) end, {
     desc = "Copy file path and selected lines",
 })

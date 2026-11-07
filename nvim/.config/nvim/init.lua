@@ -10,6 +10,7 @@ require("config.keymaps")
 require("config.autocmds")
 require("config.commands")
 require("config.other")
+require("config.local_functions")
 
 
 local diag = require("config.diagnostics")
